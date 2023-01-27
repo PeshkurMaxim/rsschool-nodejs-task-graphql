@@ -24,7 +24,7 @@ const plugin: FastifyPluginAsyncJsonSchemaToTs = async (
       const post = await fastify.db.posts.findOne({key: "id", equals: request.params.id});
 
       if (!post)
-        throw fastify.httpErrors.badRequest('post not found');
+        throw fastify.httpErrors.notFound('post not found');
 
       return post;
     }
@@ -50,7 +50,11 @@ const plugin: FastifyPluginAsyncJsonSchemaToTs = async (
       },
     },
     async function (request, reply): Promise<PostEntity> {
-      return fastify.db.posts.delete(request.params.id);
+      try {
+        return await fastify.db.posts.delete(request.params.id);
+      } catch (error) {
+        throw fastify.httpErrors.badRequest('Invalid data');
+      }
     }
   );
 
@@ -63,7 +67,11 @@ const plugin: FastifyPluginAsyncJsonSchemaToTs = async (
       },
     },
     async function (request, reply): Promise<PostEntity> {
-      return fastify.db.posts.change(request.params.id, request.body);
+      try {
+        return await fastify.db.posts.change(request.params.id, request.body);
+      } catch (error) {
+        throw fastify.httpErrors.badRequest('invalid data');
+      }
     }
   );
 };

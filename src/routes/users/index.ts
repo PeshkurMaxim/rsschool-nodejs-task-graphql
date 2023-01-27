@@ -6,6 +6,7 @@ import {
   subscribeBodySchema,
 } from './schemas';
 import type { UserEntity } from '../../utils/DB/entities/DBUsers';
+// import { validate as uuidValidate } from 'uuid';
 
 const plugin: FastifyPluginAsyncJsonSchemaToTs = async (
   fastify
@@ -41,7 +42,7 @@ const plugin: FastifyPluginAsyncJsonSchemaToTs = async (
     },
     async function (request, reply): Promise<UserEntity> {
       try {
-        return fastify.db.users.create(request.body);
+        return await fastify.db.users.create(request.body);
       } catch (error) {
         throw fastify.httpErrors.badRequest("create error");
       }
@@ -57,7 +58,26 @@ const plugin: FastifyPluginAsyncJsonSchemaToTs = async (
     },
     async function (request, reply): Promise<UserEntity> {
       try {
-        return fastify.db.users.delete(request.params.id);
+        const posts = await fastify.db.posts.findMany();
+        posts.forEach(async (post) => {
+          await fastify.db.posts.delete(post.id);
+        })
+
+        const profiles = await fastify.db.profiles.findMany();
+        profiles.forEach(async (profile) => {
+          await fastify.db.profiles.delete(profile.id);
+        })
+
+        const users = await fastify.db.users.findMany();
+        users.forEach(async (user) => {
+          if (user.subscribedToUserIds.includes(request.params.id)) {
+            await fastify.db.users.change(user.id, {
+              subscribedToUserIds: user.subscribedToUserIds.filter( (elem) => elem != request.params.id)
+            });
+          }
+        })
+
+        return await fastify.db.users.delete(request.params.id);
       } catch (error) {
         throw fastify.httpErrors.badRequest("delete error");
       }
@@ -73,13 +93,13 @@ const plugin: FastifyPluginAsyncJsonSchemaToTs = async (
       },
     },
     async function (request, reply): Promise<UserEntity> {
-      const subscribeUser = await fastify.db.users.findOne(request.params.id);
+      const subscribeUser = await fastify.db.users.findOne({key: "id", equals: request.params.id});
       if (!subscribeUser)
         throw fastify.httpErrors.notFound('User not found');
 
-      const user = await fastify.db.users.findOne(request.body.userId);
+      const user = await fastify.db.users.findOne({key: "id", equals: request.body.userId});
       if (!user)
-        throw fastify.httpErrors.badRequest('Incorrect data');
+        throw fastify.httpErrors.badRequest('invalid data');
 
       return fastify.db.users.change(user.id, {
         subscribedToUserIds: [...user.subscribedToUserIds, subscribeUser.id]
@@ -97,13 +117,17 @@ const plugin: FastifyPluginAsyncJsonSchemaToTs = async (
       },
     },
     async function (request, reply): Promise<UserEntity> {
-      const unsubscribeUser = await fastify.db.users.findOne(request.params.id);
+      const unsubscribeUser = await fastify.db.users.findOne({key: "id", equals: request.params.id});
       if (!unsubscribeUser)
         throw fastify.httpErrors.notFound('User not found');
 
-      const user = await fastify.db.users.findOne(request.body.userId);
+      const user = await fastify.db.users.findOne({key: "id", equals: request.body.userId});
       if (!user)
         throw fastify.httpErrors.badRequest('Incorrect data');
+
+      if (!user.subscribedToUserIds.includes(unsubscribeUser.id))
+        throw fastify.httpErrors.badRequest('Incorrect data');
+
 
       return fastify.db.users.change(user.id, {
         subscribedToUserIds: user.subscribedToUserIds.filter( (elem) => elem != unsubscribeUser.id)
@@ -120,10 +144,16 @@ const plugin: FastifyPluginAsyncJsonSchemaToTs = async (
       },
     },
     async function (request, reply): Promise<UserEntity> {
+      if (!request.params.id)
+        throw fastify.httpErrors.badRequest("no valid id");
+
       try {
-        return fastify.db.users.change(request.params.id, request.body);
+        return await fastify.db.users.change(request.params.id, request.body);
       } catch (error) {
-        throw fastify.httpErrors.badRequest("edit error");
+        // if (uuidValidate(request.params.id))
+        //   throw fastify.httpErrors.notFound("page not found");
+
+        throw fastify.httpErrors.badRequest("no valid id");
       }
     }
   );
