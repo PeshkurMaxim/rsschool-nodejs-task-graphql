@@ -43,7 +43,7 @@ const plugin: FastifyPluginAsyncJsonSchemaToTs = async (
       try {
         return fastify.db.users.create(request.body);
       } catch (error) {
-        throw fastify.httpErrors.createError("error");
+        throw fastify.httpErrors.badRequest("create error");
       }
     }
   );
@@ -73,11 +73,18 @@ const plugin: FastifyPluginAsyncJsonSchemaToTs = async (
       },
     },
     async function (request, reply): Promise<UserEntity> {
-      try {
-        return fastify.db.users.delete(request.params.id);
-      } catch (error) {
-        throw fastify.httpErrors.badRequest("subscribeTo error");
-      }
+      const subscribeUser = await fastify.db.users.findOne(request.params.id);
+      if (!subscribeUser)
+        throw fastify.httpErrors.notFound('User not found');
+
+      const user = await fastify.db.users.findOne(request.body.userId);
+      if (!user)
+        throw fastify.httpErrors.badRequest('Incorrect data');
+
+      return fastify.db.users.change(user.id, {
+        subscribedToUserIds: [...user.subscribedToUserIds, subscribeUser.id]
+      });
+
     }
   );
 
@@ -90,11 +97,17 @@ const plugin: FastifyPluginAsyncJsonSchemaToTs = async (
       },
     },
     async function (request, reply): Promise<UserEntity> {
-      try {
-        return fastify.db.users.delete(request.params.id);
-      } catch (error) {
-        throw fastify.httpErrors.badRequest("unsubscribeFrom error");
-      }
+      const unsubscribeUser = await fastify.db.users.findOne(request.params.id);
+      if (!unsubscribeUser)
+        throw fastify.httpErrors.notFound('User not found');
+
+      const user = await fastify.db.users.findOne(request.body.userId);
+      if (!user)
+        throw fastify.httpErrors.badRequest('Incorrect data');
+
+      return fastify.db.users.change(user.id, {
+        subscribedToUserIds: user.subscribedToUserIds.filter( (elem) => elem != unsubscribeUser.id)
+      });
     }
   );
 
