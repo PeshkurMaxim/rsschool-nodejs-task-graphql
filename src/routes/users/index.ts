@@ -150,9 +150,6 @@ const plugin: FastifyPluginAsyncJsonSchemaToTs = async (
       try {
         return await fastify.db.users.change(request.params.id, request.body);
       } catch (error) {
-        // if (uuidValidate(request.params.id))
-        //   throw fastify.httpErrors.notFound("page not found");
-
         throw fastify.httpErrors.badRequest("no valid id");
       }
     }
