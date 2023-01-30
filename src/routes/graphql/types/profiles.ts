@@ -32,7 +32,6 @@ export const CreateProfileInput = new GraphQLInputObjectType({
 export const UpdateProfileInput = new GraphQLInputObjectType({
   name: 'UpdateProfileInput',
   fields: {
-    userId: { type: new GraphQLNonNull(GraphQLString) },
     memberTypeId: { type: new GraphQLNonNull(GraphQLString) },
     avatar: { type: new GraphQLNonNull(GraphQLString) },
     sex: { type: new GraphQLNonNull(GraphQLString) },

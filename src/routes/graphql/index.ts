@@ -20,7 +20,7 @@ const plugin: FastifyPluginAsyncJsonSchemaToTs = async (
       },
     },
     async function (request, reply) {
-      const { query } = request.body;
+      const { query, variables } = request.body;
       const schema = new GraphQLSchema({
         query: await getQuery(fastify),
         mutation: await getMutation(fastify),
@@ -41,6 +41,7 @@ const plugin: FastifyPluginAsyncJsonSchemaToTs = async (
         schema,
         source: query!,
         contextValue: fastify,
+        variableValues: variables
       })
     }
   );
